@@ -36,6 +36,11 @@ int random_between(int lower, int upper) {
     return lower + random() % (upper - lower);
 }
 
+int random_between_iipair(IIPair pair) {
+    return random_between(pair.first, pair.second);
+}
+
+
 int main(int argc, char* argv[]) {
 
     return 0;
