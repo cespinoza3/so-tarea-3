@@ -101,16 +101,16 @@ void delay_between_dpair(DPair pair) {
 #define MIN_PRODUCTS 5
 #define MAX_PRODUCTS 15
 
-int number_registers;
-int number_clients;
-int max_clients_per_register;
-int max_products_per_client;
-int max_products_per_register;
+int number_registers = 2;
+int number_clients = 20;
+int max_clients_per_register = 10;
+int max_products_per_client = 20;
+int max_products_per_register = 10;
 
-double min_delay_register;
-double max_delay_register;
-double min_delay_client;
-double max_delay_client;
+double min_delay_register = 0.5;
+double max_delay_register = 2.0;
+double min_delay_client = 0.5;
+double max_delay_client = 2.0;
 
 
 
@@ -230,7 +230,6 @@ int Client_get_total_done_clients() {
 // end
 
 
-typedef struct CliArgs CliArgs;
 struct CliArgs {
     int number_registers;
     int number_clients;
@@ -242,10 +241,12 @@ struct CliArgs {
     double min_delay_client;
     double max_delay_client;
 };
-CliArgs parse_argv(int, char*[]);
+
+struct CliArgs parse_argv(int, char*[]);
+void print_cliargs(const struct CliArgs*);
 
 int main(int argc, char* argv[]) {
-    CliArgs args = parse_argv(argc, argv);
+    struct CliArgs args = parse_argv(argc, argv);
     number_registers = args.number_registers;
     number_clients = args.number_clients;
     max_clients_per_register = args.max_clients_per_register;
@@ -319,18 +320,18 @@ static const char* usage_string = ""
 "\n"
 "";
 
-CliArgs parse_argv(int argc, char* argv[]) {
-    CliArgs args = {
-        2,
-        20,
-        10,
-        20,
-        10,
-        0.5,
-        2.0,
-        0.5,
-        2.0
-    };
+struct CliArgs parse_argv(int argc, char* argv[]) {
+    struct CliArgs args;
+    
+    args.number_registers = number_registers;
+    args.number_clients = number_clients;
+    args.max_clients_per_register = max_clients_per_register;
+    args.max_products_per_client = max_products_per_client;
+    args.max_products_per_register = max_products_per_register;
+    args.min_delay_register = min_delay_register;
+    args.max_delay_register = max_delay_register;
+    args.min_delay_client = min_delay_client;
+    args.max_delay_client = max_delay_client;
 
     #define EXIT_AND_HELP(i) do { \
         if (strcmp(argv[(i)], "--help") == 0 || strcmp(argv[(i)], "-h") == 0) {\
@@ -393,4 +394,24 @@ CliArgs parse_argv(int argc, char* argv[]) {
     return args;
 }
 
+void print_cliargs(const struct CliArgs* self) {
+    my_printf("CliArgs {\n"
+    "number_registers = %d\n"
+    "number_clients = %d\n"
+    "max_clients_per_register = %d\n"
+    "max_products_per_client = %d\n"
+    "min_delay_register = %f\n"
+    "max_delay_register = %f\n"
+    "min_delay_client = %f\n"
+    "max_delay_client = %f\n"
+    "}\n",
+    self->number_registers, 
+    self->number_clients, 
+    self->max_clients_per_register, 
+    self->max_products_per_client, 
+    self->min_delay_register, 
+    self->max_delay_register, 
+    self->min_delay_client, 
+    self->max_delay_client);
+}
 
