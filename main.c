@@ -51,6 +51,14 @@ void myreport(int exit_code, const char* fmt, ...) {
     exit(exit_code);
 }
 
+#ifdef DEBUG
+    #define DEBUG_PRINT(fmt, ...) my_fprintf(stderr, "DEBUG::%s:%d: " fmt "\n", __func__, __LINE__, __VA_ARGS__)
+    #define DEBUG_PRINT1(fmt) DEBUG_PRINT("%s" fmt, "")
+#else
+    #define DEBUG_PRINT(fmt, ...) ((void)0)
+    #define DEBUG_PRINT1(fmt) ((void)0)
+#endif
+
 typedef struct DPair {
     double first;
     double second;
@@ -66,6 +74,10 @@ double randomf() {
 }
 
 double randomf_between(double lo, double hi) {
+    double diff = hi - lo;
+    if (diff < 0.00001 && diff > -0.00001) {
+        return lo;
+    }
     return lo + fmod(randomf(), (hi - lo));
 }
 
@@ -83,11 +95,18 @@ int random_between_iipair(IIPair pair) {
 
 void delay(double secs) {
     unsigned int msecs = secs * 1000000;
+    DEBUG_PRINT("%d msecs", msecs);
+    if (!msecs) return;
     do {
         usleep(msecs % 1000001);
-        msecs -= 1000000;
-        if (msecs < 0) msecs = 0;
+        if (msecs < 1000000) {
+            msecs = 0;
+        } else {
+            msecs -= 1000000;
+        }
+        DEBUG_PRINT("new msecs %u", msecs);
     } while(msecs);
+    DEBUG_PRINT1("finish delay");
 }
 
 void delay_between(int lo, int hi) {
@@ -95,7 +114,9 @@ void delay_between(int lo, int hi) {
 }
 
 void delay_between_dpair(DPair pair) {
-    delay(randomf_between_dpair(pair));
+    double the_delay = randomf_between_dpair(pair);
+    DEBUG_PRINT("delay from dpair: %f %f = %f", pair.first, pair.second, the_delay);
+    delay(the_delay);
 }
 
 #define MIN_PRODUCTS 5
@@ -107,10 +128,10 @@ int max_clients_per_register = 10;
 int max_products_per_client = 20;
 int max_products_per_register = 10;
 
-double min_delay_register = 0.5;
-double max_delay_register = 2.0;
-double min_delay_client = 0.5;
-double max_delay_client = 2.0;
+double min_delay_register = 0.1;
+double max_delay_register = 0.1;
+double min_delay_client = 0.1;
+double max_delay_client = 0.1;
 
 
 
@@ -121,7 +142,7 @@ typedef struct Client {
     int product_amount;
 
     pthread_mutex_t mutex;
-    sem_t on_register;
+    sem_t leaves_register;
     sem_t can_produce;
     sem_t produced_product;
     int done;
@@ -148,9 +169,11 @@ typedef struct CashRegister {
 } CashRegister;
 
 void CashRegister_change_queued_clients_by(CashRegister*, int);
+void CashRegister_attend(CashRegister*);
 
 int Client_get_total_done_clients();
 int Client_products_left_count(Client*);
+void Client_get_out_supermarket(Client*);
 
 CashRegister* cash_registers;
 Client* clients;
@@ -161,24 +184,71 @@ pthread_t* client_threads;
 
 CashRegister* CashRegister_init(CashRegister* self, int index) {
     sem_init(&self->can_queue, 0, number_clients);
-    sem_init(&self->can_attend, 0, 0);
+    sem_init(&self->can_attend, 0, 1);
     sem_init(&self->new_client, 0, 0);
-    self->conveyer_belt_capacity = max_products_per_client;
+    self->conveyer_belt_capacity = max_products_per_register;
     pthread_mutex_init(&self->mutex, NULL);
     self->index = index;
+    self->delay_range = (DPair){ min_delay_register, max_delay_register };
 
     return self;
 }
 
 void* cash_register_thread_function(void* data) {
-
+    CashRegister_attend((CashRegister*) data);
 }
 
 
+#define CAJA_PRINT(fmt, ...) my_printf("%s:%d\tCAJA %d " fmt "\n", __func__, __LINE__, self->index, __VA_ARGS__)
+#define CAJA_PRINT1(str) CAJA_PRINT(str "%s", "")
+
+#ifdef DEBUG
+    #define CAJA_DEBUG(fmt, ...) CAJA_PRINT("!!DEBUG!! " fmt, __VA_ARGS__)
+    #define CAJA_DEBUG1(fmt) CAJA_DEBUG("%s" fmt, "")
+#else
+    #define CAJA_DEBUG(fmt, ...) ((void)0)
+    #define CAJA_DEBUG1(fmt) ((void)0)
+#endif
 
 void CashRegister_attend(CashRegister* self) {
+    bool first_client_arrived = false;
+    sem_wait(&self->new_client);
+    while (self->queued_clients) {
+        if (first_client_arrived) {
+            sem_wait(&self->new_client);
+        }
+        first_client_arrived = true;
+        Client* client = self->current_client;
+        CAJA_PRINT("EMPIEZA A ATENDER CLIENTE %d", client->index);
 
+        self->conveyer_belt_count = 0;
+        CAJA_DEBUG1("prepost can_product");
+        sem_post(&client->can_produce);
+        CAJA_DEBUG1("post can_produce");
+
+        while (Client_products_left_count(client) > 0 && self->conveyer_belt_count < self->conveyer_belt_capacity) {
+            CAJA_DEBUG1("prewait prodcued_product");
+            sem_wait(&client->produced_product);
+            CAJA_DEBUG1("postwait prodcued_product");
+
+            delay_between_dpair(self->delay_range);
+            CAJA_PRINT("CONSUME PRODUCTO %d", self->conveyer_belt[self->conveyer_belt_count]);
+            self->conveyer_belt_count++;
+            sem_post(&client->can_produce);
+        }
+
+        self->number_of_clients_attended++;
+        CashRegister_change_queued_clients_by(self, -1);
+        CAJA_PRINT("LIBERA A CLIENTE %d", client->index);
+        sem_post(&self->can_attend);
+        sem_post(&self->can_queue);
+    }
+    CAJA_PRINT1("CIERRA");
 }
+#undef CAJA_PRINT
+#undef CAJA_PRINT1
+#undef CAJA_DEBUG
+
 void CashRegister_change_queued_clients_by(CashRegister* self, int diff) {
     pthread_mutex_lock(&self->mutex);
     self->queued_clients += diff;
@@ -188,19 +258,29 @@ void CashRegister_change_queued_clients_by(CashRegister* self, int diff) {
 
 // == Client
 
+#define CLIENT_PRINT(fmt, ...) my_printf("%s:%d CLIENTE %d " fmt "\n", __func__, __LINE__, self->index, __VA_ARGS__)
+#define CLIENT_PRINT1(str) CLIENT_PRINT(str "%s", "")
+#ifdef DEBUG
+    #define CLIENT_DEBUG(fmt, ...) CLIENT_PRINT("!!DEBUG!! " fmt, __VA_ARGS__)
+    #define CLIENT_DEBUG1(fmt) CLIENT_DEBUG("%s" fmt, "")
+#else
+    #define CLIENT_DEBUG(fmt, ...) ((void)0)
+    #define CLIENT_DEBUG1(fmt) ((void)0)
+#endif
 Client* Client_init(Client* self, int index) {
     sem_init(&self->can_produce, 0, 0);
     sem_init(&self->produced_product, 0, 0);
-    sem_init(&self->on_register, 0, 0);
+    sem_init(&self->leaves_register, 0, 0);
     self->product_amount = random_between(1, max_products_per_client);
     pthread_mutex_init(&self->mutex, NULL);
     self->index = index;
+    self->delay_range = (DPair){ min_delay_client, max_delay_client };
 
     return self;
 }
 
 void* client_thread_function(void* data) {
-
+    Client_get_out_supermarket((Client*) data);
 }
 
 int Client_products_left_count(Client* self) {
@@ -208,15 +288,63 @@ int Client_products_left_count(Client* self) {
 }
 
 void Client_produce_products(Client* self, CashRegister* reg) {
+    sem_wait(&reg->can_attend);
+    reg->current_client = self;
+    CLIENT_PRINT("PASA A CAJA %d", reg->index);
+    sem_post(&reg->new_client);
+    for (int i = 0; i < reg->conveyer_belt_capacity && Client_products_left_count(self) > 0; ++i) {
+
+        sem_wait(&self->can_produce);
+        delay_between_dpair(self->delay_range);
+        CLIENT_PRINT("PRODUCE PRODUCTO %d", self->current_product);
+        reg->conveyer_belt[i] = self->current_product;
+        self->current_product++;
+        sem_post(&self->produced_product);
+    }
+    CLIENT_PRINT1("SALE DE LA CAJA");
+    sem_post(&self->leaves_register);
+
 }
 
-void Client_get_on_queue(Client* self, CashRegister* reg) {
 
+int compare_queued_clients(const void* p1, const void* p2) {
+    int a = *(int*) p1;
+    int b = *(int*) p2;
+    return cash_registers[a].queued_clients - cash_registers[b].queued_clients;
 }
 
-void Client_find_cash_register(Client* self) {
+pthread_mutex_t search_for_register_mutex;
+CashRegister* Client_find_cash_register(Client* self) {
+    pthread_mutex_lock(&search_for_register_mutex);
+    CashRegister* reg = NULL;
+    int indices[number_registers];
+    for (int i = 0; i < number_registers; ++i) indices[i] = i;
+    qsort(indices, number_registers, sizeof(int), &compare_queued_clients);
 
+    for (int i = 0; i < number_registers; ++i) {
+        reg = &cash_registers[indices[i]];
+        if (!sem_trywait(&reg->can_queue)) {
+            CashRegister_change_queued_clients_by(reg, 1);
+            pthread_mutex_unlock(&search_for_register_mutex);
+            return reg;
+        }
+    }
 
+    reg = &cash_registers[0];
+    sem_wait(&reg->can_queue);
+    CashRegister_change_queued_clients_by(reg, 1);
+    pthread_mutex_unlock(&search_for_register_mutex);
+    return &cash_registers[0];
+}
+
+void Client_get_out_supermarket(Client* self) {
+    CLIENT_PRINT1("ENTRA A SUPERMERCADO");
+    while (Client_products_left_count(self) > 0) {
+        CLIENT_PRINT1("BUSCA CAJA");
+        CashRegister* reg = Client_find_cash_register(self);
+        Client_produce_products(self, reg);
+    }
+    CLIENT_PRINT1("SALE DE SUPERMERCADO");
 }
 
 int Client_get_total_done_clients() {
@@ -227,6 +355,10 @@ int Client_get_total_done_clients() {
     return s;
 }
 
+#undef CLIENT_PRINT
+#undef CLIENT_PRINT1
+#undef CLIENT_DEBUG
+#undef CLIENT_DEBUG1
 // end
 
 
@@ -259,14 +391,16 @@ int main(int argc, char* argv[]) {
 
     srandom(time(NULL));
 
+    pthread_mutex_init(&search_for_register_mutex, NULL);
+
     cash_registers = calloc(sizeof(CashRegister), number_registers);
     clients = calloc(sizeof(Client), number_clients);
 
-    for (int i = 0; i < cash_registers; ++i) {
+    for (int i = 0; i < number_registers; ++i) {
         CashRegister_init(&cash_registers[i], i);
     }
 
-    for (int i = 0; i < clients; ++i) {
+    for (int i = 0; i < number_clients; ++i) {
         Client_init(&clients[i], i);
     }
 
@@ -280,12 +414,17 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    for (size_t j = 0; j < number_clients; j++)
+    for (size_t i = 0; i < number_clients; i++)
     {
         if (pthread_create(&client_threads[i], NULL, client_thread_function, &clients[i])) {
             myreport(-1, "no se pudo crear hilo\n");
         }
     }
+
+    for (int i = 0; i < number_clients; i++) {
+        pthread_join(client_threads[i], NULL);
+    }
+    
     
 
 
