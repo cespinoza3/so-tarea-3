@@ -3,6 +3,7 @@
 #include <stdarg.h>
 #include <semaphore.h>
 #include <string.h>
+#include <math.h>
 
 inline int max(int a, int b) {
     return (a > b) ? a : b;
@@ -36,6 +37,53 @@ void myreport(int exit_code, const char* fmt, ...) {
     exit(exit_code);
 }
 
+typedef struct DPair {
+    double first;
+    double second;
+} DPair;
+
+typedef struct IIPair {
+    int first;
+    int second;
+} IIPair;
+
+double randomf() {
+    return (double) (random() % 1000) / 1000.0;
+}
+
+double randomf_between(double lo, double hi) {
+    return lo + fmod(randomf(), (hi - lo));
+}
+
+double randomf_between_dpair(DPair pair) {
+    return randomf_between(pair.first, pair.second);
+}
+
+int random_between(int lower, int upper) {
+    return lower + random() % (upper - lower);
+}
+
+int random_between_iipair(IIPair pair) {
+    return random_between(pair.first, pair.second);
+}
+
+void delay(double secs) {
+    unsigned int msecs = secs * 1000000;
+    do {
+        usleep(msecs % 1000001);
+        msecs -= 1000000;
+        if (msecs < 0) msecs = 0;
+    } while(msecs);
+}
+
+void delay_between(int lo, int hi) {
+    delay(randomf_between(lo, hi));
+}
+
+void delay_between_dpair(DPair pair) {
+    delay(randomf_between_dpair(pair));
+}
+
 #define MIN_PRODUCTS 5
 #define MAX_PRODUCTS 15
 
@@ -50,10 +98,6 @@ double min_delay_client;
 double max_delay_client;
 
 
-typedef struct IIPair {
-    int first;
-    int second;
-} IIPair;
 
 typedef struct Client {
     IIPair delay_range;
@@ -76,13 +120,7 @@ typedef struct CashRegister {
     sem_t can_consume;
 } CashRegister;
 
-int random_between(int lower, int upper) {
-    return lower + random() % (upper - lower);
-}
 
-int random_between_iipair(IIPair pair) {
-    return random_between(pair.first, pair.second);
-}
 
 
 typedef struct CliArgs CliArgs;

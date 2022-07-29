@@ -1,5 +1,5 @@
 
-CFLAGS = -I. -lpthread
+CFLAGS = -I. -lpthread -lm
 
 %.o: %.c
 	$(CC) -c -o $@ $< $(CFLAGS)
