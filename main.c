@@ -7,6 +7,7 @@
 #include <pthread.h>
 #include <stdbool.h>
 #include <limits.h>
+#include <unistd.h>
 
 inline int max(int a, int b) {
     return (a > b) ? a : b;
@@ -21,8 +22,11 @@ inline int clamp(int value, int lo, int hi) {
 }
 
 void my_vfprintf(FILE* f, const char* fmt, va_list args) {
+    static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_lock(&mutex);
     fprintf(f, "so-tarea-3: ");
     vfprintf(f, fmt, args);
+    pthread_mutex_unlock(&mutex);
 }
 
 void my_fprintf(FILE* f, const char* fmt, ...) {
@@ -35,7 +39,7 @@ void my_fprintf(FILE* f, const char* fmt, ...) {
 void my_printf(const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    my_fprintf(stdout, fmt, args);
+    my_vfprintf(stdout, fmt, args);
     va_end(args);
 }
 
