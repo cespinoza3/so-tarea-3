@@ -3,6 +3,18 @@
 #include <stdarg.h>
 #include <semaphore.h>
 
+inline int max(int a, int b) {
+    return (a > b) ? a : b;
+}
+
+inline int min(int a, int b) {
+    return (a < b) ? a : b;
+}
+
+inline int clamp(int value, int lo, int hi) {
+    return max(lo, min(hi, value));
+}
+
 void my_vfprintf(FILE* f, const char* fmt, va_list args) {
     fprintf(f, "so-tarea-3: ");
     vfprintf(f, fmt, args);
