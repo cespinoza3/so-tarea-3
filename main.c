@@ -107,27 +107,92 @@ double max_delay_client;
 
 
 typedef struct Client {
-    IIPair delay_range;
-
+    DPair delay_range;
+    int current_product;
+    int product_amount;
+    sem_t on_register;
     sem_t can_produce;
+    sem_t produced_product;
+    int done;
 } Client;
 
 typedef struct CashRegister {
     int capacity;
-    IIPair delay_range;
+    DPair delay_range;
 
-    int client_count;
-    Client clients[MAX_CLIENTS];
-    int current_client;
+    Client* current_client;
 
     int conveyer_belt_capacity;
     int conveyer_belt_count;
     int conveyer_belt[MAX_PRODUCTS];
 
-    sem_t can_consume;
+    sem_t new_client;
+    sem_t can_attend;
+    sem_t can_queue;
 } CashRegister;
 
+int Client_get_total_done_clients();
+int Client_products_left_count(Client*);
 
+CashRegister* cash_registers;
+Client* clients;
+
+// == CashRegister
+
+CashRegister* CashRegister_new() {
+    CashRegister* self = calloc(sizeof(CashRegister), 1);
+    sem_init(&self->can_queue, 0, number_clients);
+    sem_init(&self->can_attend, 0, 0);
+    sem_init(&self->new_client, 0, 0);
+    self->conveyer_belt_capacity = max_products_per_client;
+
+    return self;
+}
+
+void CashRegister_attend(CashRegister* self) {
+
+    }
+
+
+}
+// end
+
+// == Client
+
+Client* Client_new() {
+    Client *self = calloc(sizeof(Client), 1);
+    sem_init(&self->can_produce, 0, 0);
+    sem_init(&self->produced_product, 0, 0);
+    sem_init(&self->on_register, 0, 0);
+    self->product_amount = random_between(1, max_products_per_client);
+    return self;
+}
+
+int Client_products_left_count(Client* self) {
+    return self->product_amount - self->current_product;
+}
+
+void Client_produce_products(Client* self, CashRegister* reg) {
+}
+
+void Client_get_on_queue(Client* self, CashRegister* reg) {
+
+}
+
+void Client_find_cash_register(Client* self) {
+
+
+}
+
+int Client_get_total_done_clients() {
+    int s = 0;
+    for (int i = 0; i < number_clients; ++i) {
+        s += clients[i].done;
+    }
+    return s;
+}
+
+// end
 
 
 typedef struct CliArgs CliArgs;
@@ -155,6 +220,9 @@ int main(int argc, char* argv[]) {
     max_delay_client = args.max_delay_client;
 
     srandom(time(NULL));
+
+    cash_registers = calloc(sizeof(CashRegister), number_registers);
+    clients = calloc(sizeof(Client), number_clients);
 
 
     return 0;
