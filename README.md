@@ -13,3 +13,8 @@ para ejecutar utilizar el siguiente comando:
 ```bash
 ./bin/main
 ```
+
+para ver ayuda utilizar
+```bash
+./bin/main -h
+```

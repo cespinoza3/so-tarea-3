@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <semaphore.h>
+#include <string.h>
 
 inline int max(int a, int b) {
     return (a > b) ? a : b;
@@ -35,9 +36,19 @@ void myreport(int exit_code, const char* fmt, ...) {
     exit(exit_code);
 }
 
-#define MAX_CLIENTS 10
 #define MIN_PRODUCTS 5
 #define MAX_PRODUCTS 15
+
+int number_registers;
+int number_clients;
+int max_clients_per_register;
+int max_products_per_client;
+
+double min_delay_register;
+double max_delay_register;
+double min_delay_client;
+double max_delay_client;
+
 
 typedef struct IIPair {
     int first;
@@ -85,12 +96,22 @@ CliArgs parse_argv(int, char*[]);
 
 int main(int argc, char* argv[]) {
     CliArgs args = parse_argv(argc, argv);
+    number_registers = args.number_registers;
+    number_clients = args.number_clients;
+    max_clients_per_register = args.max_clients_per_register;
+    max_products_per_client = args.max_products_per_client;
+
+    srandom(time(NULL));
+
+
     return 0;
 }
 
 
 static const char* usage_string = ""
 "so-tarea-3 [ <numero cajas> ] [ <numero clientes> ] [ <max clientes por caja> ] [ <max productos por cliente> ]"
+"\n" 
+"so-tarea-3 ( -h | --help )"
 "\n" "\n"
 "Opciones:"
 "\n"
@@ -112,15 +133,25 @@ CliArgs parse_argv(int argc, char* argv[]) {
         20
     };
 
+    #define EXIT_AND_HELP(i) do { \
+        if (strcmp(argv[(i)], "--help") == 0 || strcmp(argv[(i)], "-h") == 0) {\
+            myreport(0, usage_string);\
+        }\
+    } while(0)
+
     switch (argc) {
         case 5:
             args.max_products_per_client = atoi(argv[4]);
+            EXIT_AND_HELP(4);
         case 4:
             args.max_clients_per_register = atoi(argv[3]);
+            EXIT_AND_HELP(3);
         case 3:
             args.number_clients = atoi(argv[2]);
+            EXIT_AND_HELP(2);
         case 2:
             args.number_registers = atoi(argv[1]);
+            EXIT_AND_HELP(1);
         case 1:
             break;
         default:
@@ -133,8 +164,9 @@ CliArgs parse_argv(int argc, char* argv[]) {
         "numero cajas: %d\n"
         "numero clientes: %d\n"
         "max clientes por caja: %d\n"
-        "max productos por cliente: %d\n"
-        "", args.number_registers, args.number_clients, args.max_clients_per_register, args.max_products_per_client);
+        "max productos por cliente: %d\n\n"
+        "%s"
+        "", args.number_registers, args.number_clients, args.max_clients_per_register, args.max_products_per_client, usage_string);
     }
 
     return args;
