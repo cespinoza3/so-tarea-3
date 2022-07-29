@@ -101,7 +101,7 @@ int number_registers;
 int number_clients;
 int max_clients_per_register;
 int max_products_per_client;
-int max_products_per_register = 10;
+int max_products_per_register;
 
 double min_delay_register;
 double max_delay_register;
@@ -232,6 +232,7 @@ struct CliArgs {
     int number_clients;
     int max_clients_per_register;
     int max_products_per_client;
+    int max_products_per_register;
     double min_delay_register;
     double max_delay_register;
     double min_delay_client;
@@ -245,6 +246,7 @@ int main(int argc, char* argv[]) {
     number_clients = args.number_clients;
     max_clients_per_register = args.max_clients_per_register;
     max_products_per_client = args.max_products_per_client;
+    max_products_per_register = args.max_products_per_register;
     min_delay_register = args.min_delay_register;
     max_delay_register = args.max_delay_register;
     min_delay_client = args.min_delay_client;
@@ -287,7 +289,7 @@ int main(int argc, char* argv[]) {
 
 
 static const char* usage_string = ""
-"so-tarea-3 [ <numero cajas> ] [ <numero clientes> ] [ <max clientes por caja> ] [ <max productos por cliente> ] [ <min demora caja> ] [ <max demora caja> ] [ <min demora cliente> ] [ <max demora cliente> ]"
+"so-tarea-3 [ <numero cajas> ] [ <numero clientes> ] [ <max clientes por caja> ] [ <max productos por cliente> ] [ <max productos por caja> ] [ <min demora caja> ] [ <max demora caja> ] [ <min demora cliente> ] [ <max demora cliente> ]"
 "\n" 
 "so-tarea-3 ( -h | --help )"
 "\n" "\n"
@@ -300,6 +302,8 @@ static const char* usage_string = ""
 "  <max clientes por caja>      -  N° máximo de clientes que se atenderán por caja [por defecto: 10]"
 "\n"
 "  <max productos por cliente>  -  N° máximo de productos que tendrá un cliente [por defecto: 20]"
+"\n"
+"  <max productos por caja>  -  N° máximo de productos que tendrá una caja [por defecto: 10]"
 "\n"
 "  <min demora caja>  -  Tiempo mínimo de demora de la caja [por defecto: 0.5]"
 "\n"
@@ -317,6 +321,7 @@ CliArgs parse_argv(int argc, char* argv[]) {
         20,
         10,
         20,
+        10,
         0.5,
         2.0,
         0.5,
@@ -330,17 +335,20 @@ CliArgs parse_argv(int argc, char* argv[]) {
     } while(0)
 
     switch (argc) {
+        case 10:
+            args.max_delay_client = atof(argv[10]);
+            EXIT_AND_HELP(10);
         case 9:
-            args.max_delay_client = atof(argv[8]);
-            EXIT_AND_HELP(8);
+            args.min_delay_client = atof(argv[9]);
+            EXIT_AND_HELP(9);
         case 8:
-            args.min_delay_client = atof(argv[7]);
-            EXIT_AND_HELP(7);
+            args.max_delay_register = atof(argv[8]);
+            EXIT_AND_HELP(8);
         case 7:
-            args.max_delay_register = atof(argv[6]);
-            EXIT_AND_HELP(6);
+            args.min_delay_register = atof(argv[7]);
+            EXIT_AND_HELP(7);
         case 6:
-            args.min_delay_register = atof(argv[5]);
+            args.max_products_per_register = atoi(argv[5]);
             EXIT_AND_HELP(5);
         case 5:
             args.max_products_per_client = atoi(argv[4]);
@@ -360,20 +368,21 @@ CliArgs parse_argv(int argc, char* argv[]) {
             myreport(-1, usage_string);
     }
 
-    if (args.number_clients == 0 || args.number_registers == 0 || args.max_clients_per_register == 0 || args.max_products_per_client == 0 
-        || args.min_delay_register == 0 || args.max_delay_register == 0 || args.min_delay_client == 0 || args.max_delay_client == 0) {
+    if (args.number_clients == 0 || args.number_registers == 0 || args.max_clients_per_register == 0 || args.max_products_per_client == 0 || args.max_products_per_register == 0
+         || args.min_delay_register == 0 || args.max_delay_register == 0 || args.min_delay_client == 0 || args.max_delay_client == 0) {
         myreport(-1, ""
         "error en valores dados:\n"
         "numero cajas: %d\n"
         "numero clientes: %d\n"
         "max clientes por caja: %d\n"
         "max productos por cliente: %d\n"
+        "max productos por caja: %d\n"
         "min demora caja: %f\n"
         "max demora caja: %f\n"
         "min demora cliente: %f\n"
         "max demora cliente: %f\n\n"
         "%s"
-        "", args.number_registers, args.number_clients, args.max_clients_per_register, args.max_products_per_client, 
+        "", args.number_registers, args.number_clients, args.max_clients_per_register, args.max_products_per_client, args.max_products_per_register, 
         args.min_delay_register, args.max_delay_register, args.min_delay_client, args.max_delay_client, usage_string);
     }
 
