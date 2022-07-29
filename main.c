@@ -113,6 +113,8 @@ typedef struct Client {
     DPair delay_range;
     int current_product;
     int product_amount;
+
+    pthread_mutex_t mutex;
     sem_t on_register;
     sem_t can_produce;
     sem_t produced_product;
@@ -129,10 +131,15 @@ typedef struct CashRegister {
     int conveyer_belt_count;
     int conveyer_belt[MAX_PRODUCTS];
 
+    int queued_clients;
+
+    pthread_mutex_t mutex;
     sem_t new_client;
     sem_t can_attend;
     sem_t can_queue;
 } CashRegister;
+
+void CashRegister_change_queued_clients_by(CashRegister*, int);
 
 int Client_get_total_done_clients();
 int Client_products_left_count(Client*);
@@ -150,6 +157,7 @@ CashRegister* CashRegister_new() {
     sem_init(&self->can_attend, 0, 0);
     sem_init(&self->new_client, 0, 0);
     self->conveyer_belt_capacity = max_products_per_client;
+    pthread_mutex_init(&self->mutex, NULL);
 
     return self;
 }
@@ -163,6 +171,11 @@ void* cash_register_thread_function(void* data) {
 void CashRegister_attend(CashRegister* self) {
 
 }
+void CashRegister_change_queued_clients_by(CashRegister* self, int diff) {
+    pthread_mutex_lock(&self->mutex);
+    self->queued_clients += diff;
+    pthread_mutex_unlock(&self->mutex);
+}
 // end
 
 // == Client
@@ -173,6 +186,8 @@ Client* Client_new() {
     sem_init(&self->produced_product, 0, 0);
     sem_init(&self->on_register, 0, 0);
     self->product_amount = random_between(1, max_products_per_client);
+    pthread_mutex_init(&self->mutex, NULL);
+
     return self;
 }
 
