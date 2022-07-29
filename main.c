@@ -136,6 +136,8 @@ int Client_products_left_count(Client*);
 
 CashRegister* cash_registers;
 Client* clients;
+pthread_t* cash_register_threads; 
+pthread_t* client_threads; 
 
 // == CashRegister
 
@@ -148,6 +150,12 @@ CashRegister* CashRegister_new() {
 
     return self;
 }
+
+void* cash_register_thread_function(void* data) {
+
+}
+
+
 
 void CashRegister_attend(CashRegister* self) {
 
@@ -163,6 +171,10 @@ Client* Client_new() {
     sem_init(&self->on_register, 0, 0);
     self->product_amount = random_between(1, max_products_per_client);
     return self;
+}
+
+void* client_thread_function(void* data) {
+
 }
 
 int Client_products_left_count(Client* self) {
@@ -220,8 +232,22 @@ int main(int argc, char* argv[]) {
 
     cash_registers = calloc(sizeof(CashRegister), number_registers);
     clients = calloc(sizeof(Client), number_clients);
+    cash_register_threads = calloc(sizeof(pthread_t), number_registers);
+    client_threads = calloc(sizeof(pthread_t), number_clients);
+    for (size_t i = 0; i < number_registers; i++)
+    {
+        if (pthread_create(&cash_register_threads[i], NULL, cash_register_thread_function, &cash_registers[i])) {
+            myreport(-1, "no se pudo crear hilo\n");
+        }
+    }
 
-
+    for (size_t j = 0; j < number_clients; j++)
+    {
+        if (pthread_create(&client_threads[i], NULL, client_thread_function, &clients[i])) {
+            myreport(-1, "no se pudo crear hilo\n");
+        }
+    }
+    
     return 0;
 }
 
