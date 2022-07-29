@@ -4,6 +4,9 @@
 #include <semaphore.h>
 #include <string.h>
 #include <math.h>
+#include <pthread.h>
+#include <stdbool.h>
+#include <limits.h>
 
 inline int max(int a, int b) {
     return (a > b) ? a : b;
