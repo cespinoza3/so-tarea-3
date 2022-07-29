@@ -128,10 +128,10 @@ int max_clients_per_register = 10;
 int max_products_per_client = 20;
 int max_products_per_register = 10;
 
-double min_delay_register = 0.1;
-double max_delay_register = 0.1;
-double min_delay_client = 0.1;
-double max_delay_client = 0.1;
+double min_delay_register = 0.5;
+double max_delay_register = 2.0;
+double min_delay_client = 0.5;
+double max_delay_client = 2.0;
 
 
 
