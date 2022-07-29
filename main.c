@@ -151,9 +151,6 @@ CashRegister* CashRegister_new() {
 
 void CashRegister_attend(CashRegister* self) {
 
-    }
-
-
 }
 // end
 
