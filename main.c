@@ -29,6 +29,13 @@ void my_fprintf(FILE* f, const char* fmt, ...) {
     va_end(args);
 }
 
+void my_printf(const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    my_fprintf(stdout, fmt, args);
+    va_end(args);
+}
+
 void myreport(int exit_code, const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
