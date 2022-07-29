@@ -110,6 +110,7 @@ double max_delay_client;
 
 
 typedef struct Client {
+    int index;
     DPair delay_range;
     int current_product;
     int product_amount;
@@ -122,6 +123,8 @@ typedef struct Client {
 } Client;
 
 typedef struct CashRegister {
+    int number_of_clients_attended;
+    int index;
     int capacity;
     DPair delay_range;
 
@@ -151,13 +154,13 @@ pthread_t* client_threads;
 
 // == CashRegister
 
-CashRegister* CashRegister_new() {
-    CashRegister* self = calloc(sizeof(CashRegister), 1);
+CashRegister* CashRegister_init(CashRegister* self, int index) {
     sem_init(&self->can_queue, 0, number_clients);
     sem_init(&self->can_attend, 0, 0);
     sem_init(&self->new_client, 0, 0);
     self->conveyer_belt_capacity = max_products_per_client;
     pthread_mutex_init(&self->mutex, NULL);
+    self->index = index;
 
     return self;
 }
@@ -180,13 +183,13 @@ void CashRegister_change_queued_clients_by(CashRegister* self, int diff) {
 
 // == Client
 
-Client* Client_new() {
-    Client *self = calloc(sizeof(Client), 1);
+Client* Client_init(Client* self, int index) {
     sem_init(&self->can_produce, 0, 0);
     sem_init(&self->produced_product, 0, 0);
     sem_init(&self->on_register, 0, 0);
     self->product_amount = random_between(1, max_products_per_client);
     pthread_mutex_init(&self->mutex, NULL);
+    self->index = index;
 
     return self;
 }
@@ -250,8 +253,18 @@ int main(int argc, char* argv[]) {
 
     cash_registers = calloc(sizeof(CashRegister), number_registers);
     clients = calloc(sizeof(Client), number_clients);
+
+    for (int i = 0; i < cash_registers; ++i) {
+        CashRegister_init(&cash_registers[i], i);
+    }
+
+    for (int i = 0; i < clients; ++i) {
+        Client_init(&clients[i], i);
+    }
+
     cash_register_threads = calloc(sizeof(pthread_t), number_registers);
     client_threads = calloc(sizeof(pthread_t), number_clients);
+
     for (size_t i = 0; i < number_registers; i++)
     {
         if (pthread_create(&cash_register_threads[i], NULL, cash_register_thread_function, &cash_registers[i])) {
@@ -266,6 +279,8 @@ int main(int argc, char* argv[]) {
         }
     }
     
+
+
     return 0;
 }
 
