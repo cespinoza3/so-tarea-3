@@ -101,6 +101,7 @@ int number_registers;
 int number_clients;
 int max_clients_per_register;
 int max_products_per_client;
+int max_products_per_register = 10;
 
 double min_delay_register;
 double max_delay_register;
